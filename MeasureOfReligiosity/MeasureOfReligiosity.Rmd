@@ -1,0 +1,167 @@
+---
+  title: "Measure of Religiosity"
+  author: "Nikhil Raman"
+  date: "December 27, 2017"
+  output: 
+    md_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The aim of this project is to find a measure of religiosity using the 2006 General Social Survey (GSS) dataset. 
+
+## Variable Selection
+
+The following variables from the GSS were selected as relevent for this study:  
+
+**God**. This variable captures respondents' beliefs in the existence of god on a 6 point scale  
+
+**Punsin**. This variable captures respondents' beliefs on whether those who violate god's rules should be punished on a 4 point scale  
+
+**Fund**. This variable captures the fundamentalism of a respondent's religious belief on a 3 point scale  
+
+**Attend**. This varliable captures how often a respondent attends religious services on an 8 point scale   
+
+**Postlife**. This variable captures respondents' belief in an afterlife on a 3 point scale  
+
+**Pray**. This varlaible captures how often a respondent prays to god on a 6 pointscale  
+
+**Bible**. This variable captures how a respondent believes the bible should be viewed on a 4 pointscale  
+
+**Relexper**. This variable captures whether the respondent experienced a spiritual awakening on a three point scale  
+
+**Relactiv**. This variable captures how active a respondent is in church and related activities  
+
+**Polviews**. This variable captures the political views of a respondent on a 7 point scale  
+
+## Data Cleaning
+
+The selected variables were recoded in a consistent manner. Response categories "missing" and "No answer" were recoded to NA. The variables were rescaled using the **scale** function.
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# Importing relevant libraries...
+library(magrittr)
+library(dplyr)
+library(readxl)
+library(countrycode)
+library(psych)
+library(car)
+library(corrplot)
+library(geojsonio)
+library(leaflet)
+```
+
+```{r include=FALSE}
+# Loading GSS data...
+gss <- read.csv("/Users/antoshachekhonte/Documents/DataAnalysis/GSS.2006.csv.xls")
+```
+
+```{r include=FALSE}
+# Reformatting selected variables...
+gss$god <- scale(ifelse(gss$god>6,NA,gss$god))
+gss$punsin <- scale(ifelse(gss$punsin==1,4,
+                     ifelse(gss$punsin==2,3,
+                            ifelse(gss$punsin==3,2,
+                                   ifelse(gss$punsin==4,1,NA)))))
+gss$fund <- scale(ifelse(gss$fund==1,3,
+                   ifelse(gss$fund==2,2,
+                          ifelse(gss$fund==3,1,NA))))
+gss$attend <- scale(ifelse(gss$attend==9,NA,gss$attend))
+gss$reliten <- scale(ifelse(gss$reliten==1,4,
+                      ifelse(gss$reliten==2,3,
+                             ifelse(gss$reliten==3,2,
+                                    ifelse(gss$reliten==4,1,NA)))))
+gss$postlife <- scale(ifelse(gss$postlife==1,3,
+                       ifelse(gss$postlife==8,2,
+                              ifelse(gss$postlife==2,1,NA))))
+gss$pray <- scale(ifelse(gss$pray==1,6,
+                   ifelse(gss$pray==2,5,
+                          ifelse(gss$pray==3,4,
+                                 ifelse(gss$pray==4,3,
+                                        ifelse(gss$pray==5,2,
+                                               ifelse(gss$pray==6,1,NA)))))))
+gss$bible <- scale(ifelse(gss$bible==1,4,
+                    ifelse(gss$bible==2,3,
+                           ifelse(gss$bible==3,2,
+                                  ifelse(gss$bible==4,1,NA)))))
+gss$godswill <- scale(ifelse(gss$godswill==1,4,
+                       ifelse(gss$godswill==2,3,
+                              ifelse(gss$godswill==3,2,
+                                     ifelse(gss$godswill==4,1,NA)))))
+gss$stresses <- scale(ifelse(gss$stresses==1,4,
+                       ifelse(gss$stresses==2,3,
+                              ifelse(gss$stresses==3,2,
+                                     ifelse(gss$stresses==4,1,NA)))))
+gss$relexper <- scale(ifelse(gss$relexper==1,3,
+                       ifelse(gss$relexper==8,2,
+                              ifelse(gss$relexper==2,1,NA))))
+gss$relactiv <- scale(ifelse(gss$relactiv>10,NA,gss$relactiv))
+gss$polviews <- scale(ifelse(gss$polviews>7,NA,gss$polviews))
+gss$partyid <- scale(ifelse(gss$partyid>6,NA,gss$partyid))
+gss$happy <- scale(ifelse(gss$happy==1,4,
+                    ifelse(gss$happy==2,3,
+                           ifelse(gss$happy==3,2,
+                                  ifelse(gss$happy==4,1,NA)))))
+```
+
+```{r include=FALSE}
+# Subsetting relevent variables...
+v <- c("god","bible","fund","postlife","punsin","polviews","attend","reliten","pray","relexper","relactiv")
+gss.religiosity <- gss[,v]
+```
+
+## Results
+
+### The following is the correlation plot of the selected variables:
+
+```{r echo=FALSE}
+# Building corrplot...
+corrplot(cor(gss.religiosity,use="pairwise.complete.obs"),tl.cex=0.7)
+```
+
+The data appears to have some structure - we see a degree of **clustering** in the data. The cluster in the bottom right comprising of relactiv, relexper, pray, reliten and attend is particularly prominent. 
+
+### The following is the result of the Cronbach's alpha test conducted on the data:
+
+```{r echo=FALSE}
+alpha(gss.religiosity)
+```
+
+The data shows a **high degree of internal consistency**, with a standardized alpha of 0.84. 
+
+### Factor Analysis
+
+Factor analysis was conducted, reducing the variables to 4 factors using the minimum residuals method. Below are the factor loadings:
+
+```{r echo=FALSE}
+# Conducting factor analysis with rotation for ease of interpretation...
+fa <- fa(gss.religiosity,nfactors=4,max.iter=100,fm="minres",rotate="varimax")
+fa$loadings
+```
+
+**MR1** accounts for 16%, **MR3** accounts for 13%, **MR4** accounts for 11%  and **MR2** accounts for 10.5% of the variance in the data. The four factors together account for 51% of the variance in the data. 
+
+### Interpretation of factors
+
+**MR1**. The loadings for attend, relactiv, reliten, pray and relexper are high. This factor could represent how actively a respondent participates in religious practices - does the respondent attend religious serves? does the respondent participate in church activities? does the respondent pray regularly? does the respondent see himself as a strongly religious person?  
+
+**MR3**. The loadings for god, bible, postlife, reliten and pray are high. This factor could represent to what degree a respondent believes in religious tenets - does the respondent believe in god? does the respondent view the bible as the word of god? does the respondent see himself as a strongly religious person?  
+
+**MR4**. The loadings for punsin, bible, god and pray are high - particularly high is the loading for punsin. This factor could represent whether a respondent believes a person who transgresses a religious norm should be punished  
+
+**MR2**. The loading for fund is very high - 0.933. This factor could represent whether a respondent is a fundamentalist  
+
+### Visualization of factors
+
+```{r}
+# Extracting factor loadings...
+l <- fa$loadings[,1:2]
+plot(l,type="n")
+text(l,labels=names(gss.religiosity),cex=0.7)
+```
+
+As was noted in the interpretation above, **MR1** ranges from relexper through reliten and relactiv to attend, indicating that this factor captures whether a respondent actively participates in religious activities. **MR3** ranges from punsin through fund, bible and postlife to god - this factor captures whether a respondent believes in religious tenets.
